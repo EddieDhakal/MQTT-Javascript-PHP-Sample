@@ -1,0 +1,7 @@
+INSERT INTO `pushup_target`
+    (`day`, `target`)
+VALUES
+{% for day, target in new_targets %}
+    ('{{ day }}', {{ target }}) {{ not loop.last ? "," }}
+{% endfor %}
+;

@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+    <title>Subscriber</title>
+</head>
+<body>
+<h1>Pushup Target Live Preview</h1>
+<canvas id="myChart"></canvas>
+
+<script src="mqtt.min.js"></script>
+<script src="charts.min.js"></script>
+<script>
+    (function() {
+        var ctx = document.getElementById('myChart').getContext('2d');
+        var liveChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [{% for day in days %} "{{ day }}", {% endfor %}],
+                datasets: [{
+                    label: 'Pushup Target for the next week',
+                    data: [{% for target in targets %} {{ target }}, {% endfor %}],
+                    backgroundColor: "green"
+                }]
+            },
+            options: {
+                scales: {
+                    yAxes: [{
+                        stacked: true
+                    }]
+                }
+            }
+        });
+
+
+
+        var connection_url = 'ws://test.mosquitto.org:8080';
+//        var connection_url = 'ws://localhost:9002';
+
+        var client = mqtt.connect(connection_url);
+
+        client.subscribe("pushup_target");
+
+        client.on("message", function (topic, payload) {
+            var obj_payload = JSON.parse(payload);
+            var keys = Object.keys(obj_payload);
+            var new_pushup_target = [];
+            for (var i = 0; i < keys.length; i++) {
+                new_pushup_target.push(obj_payload[keys[i]]);
+            }
+
+            liveChart.data.datasets[0].data = new_pushup_target;
+            liveChart.update();
+        });
+    })();
+</script>
+</body>
+</html>

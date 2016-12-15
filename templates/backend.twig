@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Publisher</title>
+    <style>
+        textarea#payload  {
+            width: 500px;
+            height: 400px;
+            font-size: 24px;
+        }
+    </style>
+</head>
+
+<body>
+<h1>Pushup Target for the next week</h1>
+<label>
+    <textarea id="payload">{{ pushup_target }}</textarea>
+</label><br>
+
+<button id="save_and_publish">Save and Publish</button>
+
+<script src="mqtt.min.js"></script>
+<script>
+    'use strict';
+
+    var async_post = function(option) {
+        var xhttp = new XMLHttpRequest();
+
+        xhttp.onreadystatechange = function() {
+            if (this.readyState === 4 && this.status === 200) {
+                return option.callback(this.responseText);
+            }
+        };
+
+        xhttp.open('POST', option.url, true);
+
+        xhttp.setRequestHeader("Content-Type", "application/json");
+        xhttp.setRequestHeader("Accept", "application/json");
+
+        xhttp.send(option.payload);
+    };
+
+
+    (function(async_post) {
+        var connection_url = 'ws://test.mosquitto.org:8080';
+//        var connection_url = 'ws://localhost:9002';
+
+        var client = mqtt.connect(connection_url);
+        var save_and_publish = document.getElementById('save_and_publish');
+
+        client.subscribe("pushup_target");
+        client.on("message", function (topic, payload) {
+            document.getElementById('payload').value = payload;
+        });
+
+        save_and_publish.addEventListener('click', function(event) {
+            async_post({
+                url: location.origin + '/save.php',
+                payload: document.getElementById('payload').value,
+                callback: function(response) {
+                    var callback_data = JSON.parse(response);
+
+                    if (callback_data.status === "succeeded") {
+                        client.publish("pushup_target", document.getElementById('payload').value);
+                    } else {
+                        alert(callback_data.error);
+                    }
+                }
+            });
+        });
+    })(async_post);
+</script>
+</body>
+</html>
